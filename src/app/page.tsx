@@ -35,6 +35,9 @@ export default function HomePage() {
             <a className="btn btn-primary" href="#acknowledge">
               Acknowledge membership
             </a>
+            <a className="btn btn-secondary" href="/profile">
+              My player profile
+            </a>
           </div>
         </div>
       </section>
@@ -78,6 +81,8 @@ export default function HomePage() {
             <span>Sweet Wednesday Hoops · Agreement v{AGREEMENT_VERSION}</span>
           </p>
           <p>
+            <a href="/profile">Player profile</a>
+            {" · "}
             <a href="/admin">Acknowledgements list</a>
           </p>
         </div>

@@ -497,6 +497,149 @@ a {
   flex-shrink: 0;
 }
 
+/* ——— Profile ——— */
+.profile-page {
+  min-height: 100svh;
+  padding: clamp(1.5rem, 4vw, 2.5rem) 0 3rem;
+  background:
+    linear-gradient(180deg, rgba(20, 53, 40, 0.07), transparent 28%),
+    var(--paper);
+}
+
+.profile-inner {
+  width: min(820px, 100%);
+  margin: 0 auto;
+  padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+}
+
+.profile-page h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 6vw, 3.4rem);
+  letter-spacing: 0.03em;
+  margin: 0 0 0.6rem;
+  font-weight: 400;
+}
+
+.profile-stack {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.profile-card {
+  background: var(--paper-elevated);
+  border: 1px solid rgba(26, 36, 28, 0.12);
+  border-radius: var(--radius);
+  padding: clamp(1.1rem, 3vw, 1.5rem);
+  box-shadow: var(--shadow-soft);
+}
+
+.profile-card h2 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  letter-spacing: 0.03em;
+  margin: 0 0 0.65rem;
+  font-weight: 400;
+}
+
+.profile-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.profile-card-head h2 {
+  margin: 0;
+}
+
+.profile-dl {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.profile-dl div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.profile-dl dt {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.profile-dl dd {
+  margin: 0;
+}
+
+.profile-banner {
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  border: 1px solid transparent;
+}
+
+.profile-banner p {
+  margin: 0;
+}
+
+.profile-banner.warn {
+  background: rgba(196, 92, 38, 0.12);
+  border-color: rgba(196, 92, 38, 0.28);
+}
+
+.profile-banner.ok {
+  background: rgba(31, 90, 61, 0.1);
+  border-color: rgba(31, 90, 61, 0.22);
+}
+
+.profile-banner.muted,
+.muted {
+  color: var(--ink-soft);
+}
+
+.muted-card {
+  opacity: 0.92;
+}
+
+.stub-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--ink-soft);
+}
+
+.stub-list li + li {
+  margin-top: 0.45rem;
+}
+
+.profile-page .btn-secondary {
+  color: var(--ink);
+  border-color: rgba(26, 36, 28, 0.22);
+  background: transparent;
+}
+
+.admin-subhead {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  letter-spacing: 0.03em;
+  margin: 0 0 0.75rem;
+  font-weight: 400;
+}
+
+.status-ok {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.status-stale {
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+
 /* ——— Admin ——— */
 .admin-page {
   min-height: 100svh;

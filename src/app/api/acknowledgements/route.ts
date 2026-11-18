@@ -38,6 +38,8 @@ export async function GET(request: Request) {
         agreementVersion: row.agreement_version,
         agreementHash: row.agreement_hash,
         createdAt: row.created_at,
+        playerId: row.player_id ? String(row.player_id) : null,
+        linkedProfile: Boolean(row.player_id),
       })),
     });
   } catch (error) {

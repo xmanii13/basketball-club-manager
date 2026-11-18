@@ -68,3 +68,62 @@ export function parseAcknowledgementBody(
     },
   };
 }
+
+export type ProfilePatchInput = {
+  fullName?: string;
+  contact?: string;
+  contactType?: ContactType;
+  messenger?: string;
+  hasSwhJersey?: boolean;
+};
+
+export function parseProfilePatchBody(
+  body: unknown,
+): { ok: true; data: ProfilePatchInput } | { ok: false; error: string } {
+  if (!body || typeof body !== "object") {
+    return { ok: false, error: "Invalid request body." };
+  }
+  const raw = body as Record<string, unknown>;
+  const data: ProfilePatchInput = {};
+
+  if ("fullName" in raw) {
+    const fullName = clean(raw.fullName, 120);
+    if (fullName.length < 2) {
+      return { ok: false, error: "Please enter your full name." };
+    }
+    data.fullName = fullName;
+  }
+  if ("contactType" in raw || "contact" in raw) {
+    const contactType = clean(raw.contactType, 16) as ContactType;
+    const contact = clean(raw.contact, 160);
+    if (contactType !== "email" && contactType !== "phone") {
+      return { ok: false, error: "Choose email or phone as contact type." };
+    }
+    if (contactType === "email" && !EMAIL_RE.test(contact)) {
+      return { ok: false, error: "Enter a valid email address." };
+    }
+    if (contactType === "phone" && !PHONE_RE.test(contact)) {
+      return { ok: false, error: "Enter a valid phone number." };
+    }
+    data.contactType = contactType;
+    data.contact = contact;
+  }
+  if ("messenger" in raw) {
+    const messenger = clean(raw.messenger, 160);
+    if (messenger.length < 2) {
+      return {
+        ok: false,
+        error: "Enter your Facebook Messenger name or profile link.",
+      };
+    }
+    data.messenger = messenger;
+  }
+  if ("hasSwhJersey" in raw) {
+    data.hasSwhJersey = raw.hasSwhJersey === true;
+  }
+
+  if (Object.keys(data).length === 0) {
+    return { ok: false, error: "No profile fields to update." };
+  }
+  return { ok: true, data };
+}

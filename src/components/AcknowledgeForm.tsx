@@ -11,11 +11,30 @@ type Status =
       fullName: string;
       agreementVersion: string;
       storage: string;
+      profileLinked: boolean;
     };
 
-export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string }) {
+export type AcknowledgeDefaults = {
+  fullName?: string;
+  contact?: string;
+  contactType?: "email" | "phone";
+  messenger?: string;
+  hasSwhJersey?: boolean;
+};
+
+export function AcknowledgeForm({
+  agreementVersion,
+  defaults,
+  onSuccess,
+}: {
+  agreementVersion: string;
+  defaults?: AcknowledgeDefaults;
+  onSuccess?: () => void;
+}) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
-  const [contactType, setContactType] = useState<"email" | "phone">("email");
+  const [contactType, setContactType] = useState<"email" | "phone">(
+    defaults?.contactType ?? "email",
+  );
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -42,6 +61,7 @@ export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string
         error?: string;
         agreementVersion?: string;
         storage?: string;
+        profileLinked?: boolean;
       };
       if (!res.ok) {
         setStatus({
@@ -55,9 +75,11 @@ export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string
         fullName: payload.fullName.trim(),
         agreementVersion: json.agreementVersion ?? agreementVersion,
         storage: json.storage ?? "unknown",
+        profileLinked: Boolean(json.profileLinked),
       });
       form.reset();
-      setContactType("email");
+      setContactType(defaults?.contactType ?? "email");
+      onSuccess?.();
     } catch {
       setStatus({
         kind: "error",
@@ -77,14 +99,24 @@ export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string
           {status.storage === "local-sample"
             ? " in this session's sample store (local development)."
             : " as the basis for SWH Basketball Club membership."}
+          {status.profileLinked
+            ? " It is linked to your player profile."
+            : ""}
         </p>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => setStatus({ kind: "idle" })}
-        >
-          Submit another acknowledgement
-        </button>
+        <div className="hero-cta">
+          {status.profileLinked ? (
+            <a className="btn btn-primary" href="/profile">
+              Open my profile
+            </a>
+          ) : null}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setStatus({ kind: "idle" })}
+          >
+            Submit another acknowledgement
+          </button>
+        </div>
       </div>
     );
   }
@@ -101,6 +133,7 @@ export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string
           required
           maxLength={120}
           placeholder="Jordan Lee"
+          defaultValue={defaults?.fullName}
         />
       </div>
 
@@ -137,6 +170,7 @@ export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string
           placeholder={
             contactType === "email" ? "you@example.com" : "+1 (555) 010-2030"
           }
+          defaultValue={defaults?.contact}
         />
       </fieldset>
 
@@ -149,6 +183,7 @@ export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string
           required
           maxLength={160}
           placeholder="Messenger name or profile link"
+          defaultValue={defaults?.messenger}
         />
         <p className="field-hint">
           Used so the club can add you to the official Messenger group chat.
@@ -156,7 +191,12 @@ export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string
       </div>
 
       <label className="check-row">
-        <input id="hasSwhJersey" name="hasSwhJersey" type="checkbox" />
+        <input
+          id="hasSwhJersey"
+          name="hasSwhJersey"
+          type="checkbox"
+          defaultChecked={defaults?.hasSwhJersey}
+        />
         <span>
           I already have an SWH jersey{" "}
           <span className="optional">

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { AcknowledgeForm } from "@/components/AcknowledgeForm";
 import { AgreementSections } from "@/components/AgreementSections";
 import { AGREEMENT_SECTIONS, AGREEMENT_VERSION } from "@/lib/agreement";
@@ -10,12 +11,22 @@ export default function HomePage() {
 
   return (
     <main>
-      <section className="hero" aria-label="SWH Basketball Club">
+      <section className="hero" aria-label="Sweet Wednesday Hoops">
         <div className="hero-inner">
-          <p className="brand">
-            SWH
-            <span className="brand-sub">Basketball Club</span>
-          </p>
+          <div className="brand">
+            <Image
+              className="brand-logo"
+              src="/swh-logo.png"
+              alt="Sweet Wednesday Hoops"
+              width={512}
+              height={512}
+              priority
+            />
+            <p className="brand-wordmark">
+              Sweet Wednesday Hoops
+              <span className="brand-sub">Basketball Club</span>
+            </p>
+          </div>
           <h1>Player agreement</h1>
           <p className="hero-lead">
             Read the club rules, then acknowledge them to confirm membership.
@@ -56,7 +67,16 @@ export default function HomePage() {
 
       <footer className="site-footer">
         <div className="section-inner">
-          <p>SWH Basketball Club · Agreement v{AGREEMENT_VERSION}</p>
+          <p className="footer-brand">
+            <Image
+              className="footer-logo"
+              src="/swh-logo.png"
+              alt=""
+              width={40}
+              height={40}
+            />
+            <span>Sweet Wednesday Hoops · Agreement v{AGREEMENT_VERSION}</span>
+          </p>
           <p>
             <a href="/admin">Acknowledgements list</a>
           </p>

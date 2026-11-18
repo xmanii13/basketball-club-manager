@@ -16,9 +16,13 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "SWH Basketball Club — Player Agreement",
+  title: "Sweet Wednesday Hoops — Player Agreement",
   description:
-    "Read the SWH Basketball Club player agreement and acknowledge it as the basis for team membership.",
+    "Read the Sweet Wednesday Hoops player agreement and acknowledge it as the basis for team membership.",
+  icons: {
+    icon: [{ url: "/swh-logo.png", type: "image/png" }],
+    apple: [{ url: "/swh-logo.png" }],
+  },
 };
 
 export default function RootLayout({

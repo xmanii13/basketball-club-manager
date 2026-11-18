@@ -8,6 +8,8 @@ export type AcknowledgementRow = {
   contact: string;
   contact_type: string;
   role: string;
+  messenger: string | null;
+  has_swh_jersey: boolean | null;
   jersey_or_age_group: string | null;
   agreement_version: string;
   agreement_hash: string;
@@ -19,16 +21,17 @@ export async function recordAcknowledgement(
 ): Promise<AcknowledgementRow> {
   const rows = await sql<AcknowledgementRow>(
     `insert into acknowledgements
-      (full_name, contact, contact_type, role, jersey_or_age_group, agreement_version, agreement_hash)
-     values ($1, $2, $3, $4, $5, $6, $7)
-     returning id, full_name, contact, contact_type, role, jersey_or_age_group,
-               agreement_version, agreement_hash, created_at`,
+      (full_name, contact, contact_type, role, messenger, has_swh_jersey,
+       agreement_version, agreement_hash)
+     values ($1, $2, $3, 'player', $4, $5, $6, $7)
+     returning id, full_name, contact, contact_type, role, messenger, has_swh_jersey,
+               jersey_or_age_group, agreement_version, agreement_hash, created_at`,
     [
       input.fullName,
       input.contact,
       input.contactType,
-      input.role,
-      input.jerseyOrAgeGroup ?? null,
+      input.messenger,
+      input.hasSwhJersey,
       AGREEMENT_VERSION,
       agreementHash(),
     ],
@@ -45,8 +48,8 @@ export async function listAcknowledgements(
 ): Promise<AcknowledgementRow[]> {
   const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
   return sql<AcknowledgementRow>(
-    `select id, full_name, contact, contact_type, role, jersey_or_age_group,
-            agreement_version, agreement_hash, created_at
+    `select id, full_name, contact, contact_type, role, messenger, has_swh_jersey,
+            jersey_or_age_group, agreement_version, agreement_hash, created_at
      from acknowledgements
      order by created_at desc
      limit $1`,

@@ -1,12 +1,11 @@
-export type Role = "player" | "parent-guardian";
 export type ContactType = "email" | "phone";
 
 export type AcknowledgementInput = {
   fullName: string;
   contact: string;
   contactType: ContactType;
-  role: Role;
-  jerseyOrAgeGroup?: string;
+  messenger: string;
+  hasSwhJersey: boolean;
   agreed: boolean;
 };
 
@@ -28,8 +27,8 @@ export function parseAcknowledgementBody(
   const fullName = clean(raw.fullName, 120);
   const contact = clean(raw.contact, 160);
   const contactType = clean(raw.contactType, 16) as ContactType;
-  const role = clean(raw.role, 32) as Role;
-  const jerseyOrAgeGroup = clean(raw.jerseyOrAgeGroup, 80) || undefined;
+  const messenger = clean(raw.messenger, 160);
+  const hasSwhJersey = raw.hasSwhJersey === true;
   const agreed = raw.agreed === true;
 
   if (fullName.length < 2) {
@@ -44,8 +43,11 @@ export function parseAcknowledgementBody(
   if (contactType === "phone" && !PHONE_RE.test(contact)) {
     return { ok: false, error: "Enter a valid phone number." };
   }
-  if (role !== "player" && role !== "parent-guardian") {
-    return { ok: false, error: "Select player or parent/guardian." };
+  if (messenger.length < 2) {
+    return {
+      ok: false,
+      error: "Enter your Facebook Messenger name or profile link.",
+    };
   }
   if (!agreed) {
     return {
@@ -60,8 +62,8 @@ export function parseAcknowledgementBody(
       fullName,
       contact,
       contactType,
-      role,
-      jerseyOrAgeGroup,
+      messenger,
+      hasSwhJersey,
       agreed,
     },
   };

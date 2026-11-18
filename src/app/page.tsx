@@ -43,8 +43,8 @@ export default function HomePage() {
             <p className="section-kicker">Membership acknowledgement</p>
             <h2 id="ack-heading">Confirm you have read and agree</h2>
             <p>
-              Submitting this form records your name, contact, role, and the
-              agreement version you accepted
+              Submitting this form records your name, contact, Messenger
+              handle, jersey status, and the agreement version you accepted
               {usingPostgres
                 ? "."
                 : " in a local sample store while DATABASE_URL is unset."}

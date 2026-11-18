@@ -26,8 +26,8 @@ export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string
       fullName: String(data.get("fullName") ?? ""),
       contact: String(data.get("contact") ?? ""),
       contactType,
-      role: String(data.get("role") ?? ""),
-      jerseyOrAgeGroup: String(data.get("jerseyOrAgeGroup") ?? ""),
+      messenger: String(data.get("messenger") ?? ""),
+      hasSwhJersey: data.get("hasSwhJersey") === "on",
       agreed: data.get("agreed") === "on",
     };
 
@@ -141,25 +141,29 @@ export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string
       </fieldset>
 
       <div className="field">
-        <label htmlFor="role">I am acknowledging as</label>
-        <select id="role" name="role" required defaultValue="player">
-          <option value="player">Player</option>
-          <option value="parent-guardian">Parent / guardian</option>
-        </select>
+        <label htmlFor="messenger">Facebook Messenger</label>
+        <input
+          id="messenger"
+          name="messenger"
+          type="text"
+          required
+          maxLength={160}
+          placeholder="Messenger name or profile link"
+        />
+        <p className="field-hint">
+          Used so the club can add you to the official Messenger group chat.
+        </p>
       </div>
 
-      <div className="field">
-        <label htmlFor="jerseyOrAgeGroup">
-          Jersey number or age group <span className="optional">(optional)</span>
-        </label>
-        <input
-          id="jerseyOrAgeGroup"
-          name="jerseyOrAgeGroup"
-          type="text"
-          maxLength={80}
-          placeholder="U14 · #23"
-        />
-      </div>
+      <label className="check-row">
+        <input id="hasSwhJersey" name="hasSwhJersey" type="checkbox" />
+        <span>
+          I already have an SWH jersey{" "}
+          <span className="optional">
+            (leave unchecked if the club needs to make one)
+          </span>
+        </span>
+      </label>
 
       <label className="check-row">
         <input id="agreed" name="agreed" type="checkbox" required />

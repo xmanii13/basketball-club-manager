@@ -12,6 +12,12 @@ function formatWhen(value: string | Date): string {
   });
 }
 
+function formatJersey(hasJersey: boolean | null): string {
+  if (hasJersey === true) return "Has jersey";
+  if (hasJersey === false) return "Needs jersey";
+  return "—";
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
@@ -76,8 +82,8 @@ export default async function AdminPage({
                 <th>When</th>
                 <th>Name</th>
                 <th>Contact</th>
-                <th>Role</th>
-                <th>Jersey / age</th>
+                <th>Messenger</th>
+                <th>Jersey</th>
                 <th>Version</th>
               </tr>
             </thead>
@@ -92,8 +98,8 @@ export default async function AdminPage({
                       {row.contact_type}
                     </div>
                   </td>
-                  <td>{row.role}</td>
-                  <td>{row.jersey_or_age_group || "—"}</td>
+                  <td>{row.messenger || "—"}</td>
+                  <td>{formatJersey(row.has_swh_jersey)}</td>
                   <td>
                     <span className="mono">{row.agreement_version}</span>
                     <div className="mono" style={{ opacity: 0.55, fontSize: "0.75rem" }}>

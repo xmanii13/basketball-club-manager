@@ -1,12 +1,12 @@
 import { agreementHash, AGREEMENT_VERSION } from "./agreement";
 import { sql } from "./db";
-import type { AppStage } from "./viewer";
 import type { ContactType } from "./validate";
 
 export type PlayerRow = {
   id: string;
-  cursor_sub: string;
+  cursor_sub: string | null;
   app_stage: string;
+  email: string | null;
   full_name: string;
   contact: string;
   contact_type: string;
@@ -31,87 +31,122 @@ export type ProfileUpdate = {
   hasSwhJersey?: boolean;
 };
 
-export async function getPlayerBySub(
-  cursorSub: string,
-  stage: AppStage,
-): Promise<PlayerRow | null> {
+export function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export async function getPlayerById(id: string): Promise<PlayerRow | null> {
   const rows = await sql<PlayerRow>(
-    `select id, cursor_sub, app_stage, full_name, contact, contact_type,
+    `select id, cursor_sub, app_stage, email, full_name, contact, contact_type,
             messenger, has_swh_jersey, created_at, updated_at
-     from players
-     where cursor_sub = $1 and app_stage = $2
-     limit 1`,
-    [cursorSub, stage],
+     from players where id = $1 limit 1`,
+    [id],
   );
   return rows[0] ?? null;
 }
 
+export async function getPlayerByEmail(email: string): Promise<PlayerRow | null> {
+  const normalized = normalizeEmail(email);
+  const rows = await sql<PlayerRow>(
+    `select id, cursor_sub, app_stage, email, full_name, contact, contact_type,
+            messenger, has_swh_jersey, created_at, updated_at
+     from players
+     where email is not null and lower(email) = $1
+     limit 1`,
+    [normalized],
+  );
+  return rows[0] ?? null;
+}
+
+/** Upsert by email. Phone-only contacts do not create profiles. */
 export async function upsertPlayerFromAck(input: {
-  cursorSub: string;
-  stage: AppStage;
   fullName: string;
   contact: string;
   contactType: ContactType;
   messenger: string;
   hasSwhJersey: boolean;
-}): Promise<PlayerRow> {
+}): Promise<PlayerRow | null> {
+  if (input.contactType !== "email") return null;
+  const email = normalizeEmail(input.contact);
+
+  const existing = await getPlayerByEmail(email);
+  if (existing) {
+    const rows = await sql<PlayerRow>(
+      `update players set
+         full_name = $2,
+         contact = $3,
+         contact_type = 'email',
+         email = $4,
+         messenger = $5,
+         has_swh_jersey = $6,
+         updated_at = now()
+       where id = $1
+       returning id, cursor_sub, app_stage, email, full_name, contact, contact_type,
+                 messenger, has_swh_jersey, created_at, updated_at`,
+      [
+        existing.id,
+        input.fullName,
+        input.contact.trim(),
+        email,
+        input.messenger,
+        input.hasSwhJersey,
+      ],
+    );
+    return rows[0] ?? null;
+  }
+
   const rows = await sql<PlayerRow>(
     `insert into players
-      (cursor_sub, app_stage, full_name, contact, contact_type, messenger, has_swh_jersey)
-     values ($1, $2, $3, $4, $5, $6, $7)
-     on conflict (cursor_sub, app_stage) do update set
-       full_name = excluded.full_name,
-       contact = excluded.contact,
-       contact_type = excluded.contact_type,
-       messenger = excluded.messenger,
-       has_swh_jersey = excluded.has_swh_jersey,
-       updated_at = now()
-     returning id, cursor_sub, app_stage, full_name, contact, contact_type,
+      (cursor_sub, app_stage, email, full_name, contact, contact_type, messenger, has_swh_jersey)
+     values (null, 'production', $1, $2, $3, 'email', $4, $5)
+     returning id, cursor_sub, app_stage, email, full_name, contact, contact_type,
                messenger, has_swh_jersey, created_at, updated_at`,
-    [
-      input.cursorSub,
-      input.stage,
-      input.fullName,
-      input.contact,
-      input.contactType,
-      input.messenger,
-      input.hasSwhJersey,
-    ],
+    [email, input.fullName, input.contact.trim(), input.messenger, input.hasSwhJersey],
   );
-  const row = rows[0];
-  if (!row) throw new Error("Failed to upsert player.");
-  return row;
+  return rows[0] ?? null;
 }
 
-export async function updatePlayer(
-  cursorSub: string,
-  stage: AppStage,
+export async function updatePlayerById(
+  playerId: string,
   patch: ProfileUpdate,
 ): Promise<PlayerRow | null> {
-  const current = await getPlayerBySub(cursorSub, stage);
+  const current = await getPlayerById(playerId);
   if (!current) return null;
 
   const fullName = patch.fullName ?? current.full_name;
-  const contact = patch.contact ?? current.contact;
   const contactType = patch.contactType ?? (current.contact_type as ContactType);
+  const contact = patch.contact ?? current.contact;
   const messenger = patch.messenger ?? current.messenger;
   const hasSwhJersey =
     patch.hasSwhJersey !== undefined
       ? patch.hasSwhJersey
       : current.has_swh_jersey;
 
+  // Keep email key stable unless they change email contact.
+  const email =
+    contactType === "email" ? normalizeEmail(contact) : current.email;
+
   const rows = await sql<PlayerRow>(
     `update players set
-       full_name = $3,
-       contact = $4,
-       contact_type = $5,
+       full_name = $2,
+       contact = $3,
+       contact_type = $4,
+       email = $5,
        messenger = $6,
        has_swh_jersey = $7,
        updated_at = now()
-     where cursor_sub = $1 and app_stage = $2
-     returning id, cursor_sub, app_stage, full_name, contact, contact_type,
+     where id = $1
+     returning id, cursor_sub, app_stage, email, full_name, contact, contact_type,
                messenger, has_swh_jersey, created_at, updated_at`,
-    [cursorSub, stage, fullName, contact, contactType, messenger, hasSwhJersey],
+    [
+      playerId,
+      fullName,
+      contact,
+      contactType,
+      email,
+      messenger,
+      hasSwhJersey,
+    ],
   );
   return rows[0] ?? null;
 }
@@ -131,7 +166,10 @@ export async function listPlayerAcknowledgements(
   );
 }
 
-export function ackIsCurrent(version: string | null | undefined, hash: string | null | undefined): boolean {
+export function ackIsCurrent(
+  version: string | null | undefined,
+  hash: string | null | undefined,
+): boolean {
   return version === AGREEMENT_VERSION && hash === agreementHash();
 }
 

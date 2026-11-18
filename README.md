@@ -15,4 +15,4 @@ Agreement copy lives in `src/lib/agreement.ts` — bump `AGREEMENT_VERSION` when
 
 Optional admin list: `/admin` (open locally without a token; set `ADMIN_TOKEN` and use `/admin?token=…` when Postgres is enabled).
 
-Player profile: `/profile` (Cursor signed-in viewer; local server uses a simulated identity). Signed-in acknowledgements link to a durable player record; re-ack when `AGREEMENT_VERSION` changes.
+Player profile: `/profile` via **email magic link** (no Cursor account). Acknowledge with email to create a profile; without `RESEND_API_KEY` + `EMAIL_FROM`, a one-time profile link is shown after submit. Re-ack when `AGREEMENT_VERSION` changes. Set the published app to **Public** so players can open it.

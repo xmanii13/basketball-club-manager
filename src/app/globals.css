@@ -593,6 +593,33 @@ a {
   background: transparent;
 }
 
+.magic-link-box {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(196, 92, 38, 0.35);
+  background: rgba(196, 92, 38, 0.1);
+}
+
+.magic-link-box p {
+  margin: 0 0 0.5rem;
+}
+
+.magic-link-url {
+  word-break: break-all;
+  font-size: 0.85rem;
+}
+
+.magic-link-url a {
+  color: var(--accent-deep);
+}
+
+.form-section .btn-secondary,
+.success-panel .btn-secondary {
+  color: var(--ink);
+  border-color: rgba(26, 36, 28, 0.22);
+}
+
 .admin-subhead {
   font-family: var(--font-display);
   font-size: 1.45rem;

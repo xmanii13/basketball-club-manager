@@ -32,13 +32,13 @@ export function ProfilePanel({
   needsReAck,
   initialPlayer,
   acknowledgements,
-  simulated,
 }: {
   agreementVersion: string;
   needsReAck: boolean;
   initialPlayer: ProfilePlayer | null;
   acknowledgements: ProfileAck[];
-  simulated: boolean;
+  /** @deprecated unused — kept optional for call-site compatibility */
+  simulated?: boolean;
 }) {
   const [player, setPlayer] = useState(initialPlayer);
   const [editing, setEditing] = useState(false);
@@ -101,12 +101,6 @@ export function ProfilePanel({
 
   return (
     <div className="profile-stack">
-      {simulated ? (
-        <p className="profile-banner muted">
-          Local preview uses a simulated Cursor viewer (not a real sign-in).
-        </p>
-      ) : null}
-
       {needsReAck ? (
         <div className="profile-banner warn" role="status">
           <p>
@@ -128,8 +122,8 @@ export function ProfilePanel({
         <section className="profile-card">
           <h2>Create your player profile</h2>
           <p>
-            Acknowledge the agreement while signed in to create a durable
-            profile tied to your Cursor account.
+            Acknowledge the agreement with your email as contact to create a
+            durable player profile you can reopen with a magic link.
           </p>
           <AcknowledgeForm agreementVersion={agreementVersion} />
         </section>

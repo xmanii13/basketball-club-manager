@@ -1,53 +1,78 @@
 import Link from "next/link";
+import { LogoutButton } from "@/components/LogoutButton";
+import { ProfileLoginForm } from "@/components/ProfileLoginForm";
 import { ProfilePanel } from "@/components/ProfilePanel";
 import { AGREEMENT_VERSION } from "@/lib/agreement";
+import { emailConfigured } from "@/lib/email";
 import {
-  getPlayerBySub,
   listPlayerAcknowledgements,
   needsReAck,
 } from "@/lib/players";
-import { asPerson, readIdentity } from "@/lib/viewer";
+import { readSessionPlayer } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProfilePage() {
-  const identity = await readIdentity();
-  const person = asPerson(identity);
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const params = await searchParams;
+  const player = await readSessionPlayer();
+  const canEmail = emailConfigured();
 
-  if (!person) {
+  if (!player) {
+    const errorNote =
+      params.error === "invalid_link"
+        ? "That sign-in link is invalid or expired. Request a new one or use the link from your acknowledgement."
+        : params.error === "missing_token"
+          ? "Missing sign-in token."
+          : params.error === "server"
+            ? "Something went wrong validating the link. Try again."
+            : null;
+
     return (
       <main className="profile-page">
         <div className="section-inner profile-inner">
           <p className="section-kicker">Player profile</p>
-          <h1>Sign in required</h1>
+          <h1>Sign in to your profile</h1>
           <p>
-            Your player profile is tied to your Cursor account so only you can
-            see it. Open this app while signed in (private or team visibility),
-            then return here.
+            Profiles are tied to the <strong>email</strong> you used when
+            acknowledging — not a Cursor account. Open your magic link, or
+            request a new one below when email delivery is set up.
           </p>
-          <p className="muted">
-            Public first-time acknowledgement still works on the home page
-            without a profile; we do not look up profiles by email alone.
-          </p>
-          <p>
-            <Link href="/">← Back to agreement</Link>
+          {errorNote ? <p className="form-error">{errorNote}</p> : null}
+          {!canEmail ? (
+            <div className="profile-banner warn">
+              <p>
+                Email delivery is not configured yet. After you acknowledge with
+                an email address, save the personal profile link shown on the
+                success screen.
+              </p>
+            </div>
+          ) : null}
+          <section className="profile-card">
+            <h2>Request a magic link</h2>
+            <ProfileLoginForm />
+          </section>
+          <p style={{ marginTop: "1.5rem" }}>
+            <Link href="/#acknowledge">Acknowledge on the home page</Link>
+            {" · "}
+            <Link href="/">← Back</Link>
           </p>
         </div>
       </main>
     );
   }
 
-  const player = await getPlayerBySub(person.sub, person.stage);
-  const acknowledgements = player
-    ? await listPlayerAcknowledgements(String(player.id))
-    : [];
+  const acknowledgements = await listPlayerAcknowledgements(String(player.id));
   const latest = acknowledgements[0] ?? null;
 
   return (
     <main className="profile-page">
       <div className="section-inner profile-inner">
         <p className="section-kicker">Player profile</p>
-        <h1>{player?.full_name ?? (person.name || "Your profile")}</h1>
+        <h1>{player.full_name}</h1>
         <p>
           View your membership details, acknowledgement history, and re-ack when
           the club updates the agreement.
@@ -55,18 +80,13 @@ export default async function ProfilePage() {
         <ProfilePanel
           agreementVersion={AGREEMENT_VERSION}
           needsReAck={needsReAck(latest)}
-          simulated={person.simulated}
-          initialPlayer={
-            player
-              ? {
-                  fullName: player.full_name,
-                  contact: player.contact,
-                  contactType: player.contact_type as "email" | "phone",
-                  messenger: player.messenger,
-                  hasSwhJersey: player.has_swh_jersey,
-                }
-              : null
-          }
+          initialPlayer={{
+            fullName: player.full_name,
+            contact: player.contact,
+            contactType: player.contact_type as "email" | "phone",
+            messenger: player.messenger,
+            hasSwhJersey: player.has_swh_jersey,
+          }}
           acknowledgements={acknowledgements.map((row) => ({
             id: String(row.id),
             agreementVersion: row.agreement_version,
@@ -77,7 +97,8 @@ export default async function ProfilePage() {
                 : row.created_at.toISOString(),
           }))}
         />
-        <p style={{ marginTop: "1.5rem" }}>
+        <p style={{ marginTop: "1.5rem" }} className="hero-cta">
+          <LogoutButton />
           <Link href="/">← Back to agreement</Link>
         </p>
       </div>

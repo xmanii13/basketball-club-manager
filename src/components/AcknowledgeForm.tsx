@@ -12,6 +12,9 @@ type Status =
       agreementVersion: string;
       storage: string;
       profileLinked: boolean;
+      magicLinkUrl: string | null;
+      magicLinkEmailed: boolean;
+      emailRequiredForProfile: boolean;
     };
 
 export type AcknowledgeDefaults = {
@@ -62,6 +65,9 @@ export function AcknowledgeForm({
         agreementVersion?: string;
         storage?: string;
         profileLinked?: boolean;
+        magicLinkUrl?: string | null;
+        magicLinkEmailed?: boolean;
+        emailRequiredForProfile?: boolean;
       };
       if (!res.ok) {
         setStatus({
@@ -76,6 +82,9 @@ export function AcknowledgeForm({
         agreementVersion: json.agreementVersion ?? agreementVersion,
         storage: json.storage ?? "unknown",
         profileLinked: Boolean(json.profileLinked),
+        magicLinkUrl: json.magicLinkUrl ?? null,
+        magicLinkEmailed: Boolean(json.magicLinkEmailed),
+        emailRequiredForProfile: Boolean(json.emailRequiredForProfile),
       });
       form.reset();
       setContactType(defaults?.contactType ?? "email");
@@ -100,9 +109,31 @@ export function AcknowledgeForm({
             ? " in this session's sample store (local development)."
             : " as the basis for SWH Basketball Club membership."}
           {status.profileLinked
-            ? " It is linked to your player profile."
+            ? " It is linked to your player profile (email)."
             : ""}
         </p>
+        {status.emailRequiredForProfile ? (
+          <p className="field-hint">
+            Tip: use <strong>email</strong> as contact next time to create a
+            returnable profile.
+          </p>
+        ) : null}
+        {status.magicLinkEmailed ? (
+          <p className="field-hint">
+            We emailed you a sign-in link for your profile.
+          </p>
+        ) : null}
+        {status.magicLinkUrl ? (
+          <div className="magic-link-box">
+            <p>
+              <strong>Save this private profile link</strong> (email delivery is
+              not configured yet). It expires soon and works once:
+            </p>
+            <p className="mono magic-link-url">
+              <a href={status.magicLinkUrl}>{status.magicLinkUrl}</a>
+            </p>
+          </div>
+        ) : null}
         <div className="hero-cta">
           {status.profileLinked ? (
             <a className="btn btn-primary" href="/profile">
@@ -172,6 +203,11 @@ export function AcknowledgeForm({
           }
           defaultValue={defaults?.contact}
         />
+        <p className="field-hint">
+          Use email to create a profile you can return to with a magic link.
+          Phone-only acknowledgements are recorded for the club but have no
+          self-serve profile.
+        </p>
       </fieldset>
 
       <div className="field">

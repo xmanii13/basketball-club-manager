@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import { recordAcknowledgement } from "@/lib/acknowledgements";
 import { AGREEMENT_VERSION, agreementHash } from "@/lib/agreement";
 import { isUsingPostgres } from "@/lib/db";
+import { emailConfigured, sendMagicLinkEmail } from "@/lib/email";
 import { upsertPlayerFromAck } from "@/lib/players";
+import {
+  absoluteUrl,
+  createMagicLink,
+  createSession,
+  SESSION_COOKIE,
+  sessionCookieOptions,
+} from "@/lib/session";
 import { parseAcknowledgementBody } from "@/lib/validate";
-import { asPerson, readIdentityFromRequest } from "@/lib/viewer";
 
 export const runtime = "nodejs";
 
@@ -22,35 +29,63 @@ export async function POST(request: Request) {
   }
 
   try {
-    const identity = await readIdentityFromRequest(request);
-    const person = asPerson(identity);
-
-    let playerId: string | null = null;
-    let cursorSub: string | null = null;
-    let stage: "production" | "preview" | null = null;
-
-    // Signed-in Cursor person → durable player profile + linked ack history.
-    // Unsigned (e.g. public) first-time ack still records membership without a profile.
-    if (person) {
-      cursorSub = person.sub;
-      stage = person.stage;
-      const player = await upsertPlayerFromAck({
-        cursorSub: person.sub,
-        stage: person.stage,
-        fullName: parsed.data.fullName,
-        contact: parsed.data.contact,
-        contactType: parsed.data.contactType,
-        messenger: parsed.data.messenger,
-        hasSwhJersey: parsed.data.hasSwhJersey,
-      });
-      playerId = String(player.id);
-    }
+    // Email contact → durable player profile. Phone-only stays guest (club list only).
+    const player = await upsertPlayerFromAck(parsed.data);
+    const playerId = player ? String(player.id) : null;
 
     const row = await recordAcknowledgement(parsed.data, {
       playerId,
-      cursorSub,
-      stage,
+      cursorSub: null,
+      stage: player ? "production" : null,
     });
+
+    let magicLinkUrl: string | null = null;
+    let magicLinkEmailed = false;
+
+    if (player) {
+      const magic = await createMagicLink(String(player.id));
+      magicLinkUrl = absoluteUrl(
+        request,
+        `/auth/magic?token=${encodeURIComponent(magic.rawToken)}`,
+      );
+
+      if (emailConfigured()) {
+        const sent = await sendMagicLinkEmail({
+          to: player.email ?? parsed.data.contact,
+          magicUrl: magicLinkUrl,
+        });
+        magicLinkEmailed = sent.ok;
+        // If email works, do not also return the raw link in JSON.
+        if (sent.ok) magicLinkUrl = null;
+      }
+
+      // Start a browser session immediately after acknowledge so they can open /profile now.
+      const session = await createSession(String(player.id));
+
+      const response = NextResponse.json(
+        {
+          ok: true,
+          id: String(row.id),
+          agreementVersion: AGREEMENT_VERSION,
+          agreementHash: agreementHash(),
+          createdAt: row.created_at,
+          storage: isUsingPostgres() ? "postgres" : "local-sample",
+          profileLinked: true,
+          profilePath: "/profile",
+          magicLinkEmailed,
+          // Only present when email is not configured (or send failed): save this link.
+          magicLinkUrl,
+          emailRequiredForProfile: false,
+        },
+        { headers: { "cache-control": "private, no-store" } },
+      );
+      response.cookies.set(
+        SESSION_COOKIE,
+        session.rawToken,
+        sessionCookieOptions(session.expiresAt),
+      );
+      return response;
+    }
 
     return NextResponse.json(
       {
@@ -60,8 +95,12 @@ export async function POST(request: Request) {
         agreementHash: agreementHash(),
         createdAt: row.created_at,
         storage: isUsingPostgres() ? "postgres" : "local-sample",
-        profileLinked: Boolean(playerId),
-        profilePath: playerId ? "/profile" : null,
+        profileLinked: false,
+        profilePath: null,
+        magicLinkUrl: null,
+        magicLinkEmailed: false,
+        emailRequiredForProfile: true,
+        note: "Use email as contact to create a returnable player profile.",
       },
       { headers: { "cache-control": "private, no-store" } },
     );

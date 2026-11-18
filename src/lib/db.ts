@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import pg from "pg";
 
@@ -33,6 +33,7 @@ export async function sql<T = Record<string, unknown>>(
 async function startLocal(): Promise<PGlite> {
   // File-backed so API routes and Server Components share one sample DB
   // across Next.js module graphs while DATABASE_URL is unset.
+  await mkdir("./.data", { recursive: true });
   const db = new PGlite("./.data/local-pg");
   const files = (await readdir("migrations").catch(() => []))
     .filter((f) => f.endsWith(".sql"))

@@ -1,0 +1,192 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+
+type Status =
+  | { kind: "idle" }
+  | { kind: "submitting" }
+  | { kind: "error"; message: string }
+  | {
+      kind: "success";
+      fullName: string;
+      agreementVersion: string;
+      storage: string;
+    };
+
+export function AcknowledgeForm({ agreementVersion }: { agreementVersion: string }) {
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [contactType, setContactType] = useState<"email" | "phone">("email");
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+
+    const payload = {
+      fullName: String(data.get("fullName") ?? ""),
+      contact: String(data.get("contact") ?? ""),
+      contactType,
+      messenger: String(data.get("messenger") ?? ""),
+      hasSwhJersey: data.get("hasSwhJersey") === "on",
+      agreed: data.get("agreed") === "on",
+    };
+
+    setStatus({ kind: "submitting" });
+    try {
+      const res = await fetch("/api/acknowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = (await res.json()) as {
+        error?: string;
+        agreementVersion?: string;
+        storage?: string;
+      };
+      if (!res.ok) {
+        setStatus({
+          kind: "error",
+          message: json.error ?? "Something went wrong.",
+        });
+        return;
+      }
+      setStatus({
+        kind: "success",
+        fullName: payload.fullName.trim(),
+        agreementVersion: json.agreementVersion ?? agreementVersion,
+        storage: json.storage ?? "unknown",
+      });
+      form.reset();
+      setContactType("email");
+    } catch {
+      setStatus({
+        kind: "error",
+        message: "Network error. Check your connection and try again.",
+      });
+    }
+  }
+
+  if (status.kind === "success") {
+    return (
+      <div className="success-panel" role="status" aria-live="polite">
+        <p className="success-kicker">You&apos;re on the list</p>
+        <h3>Thanks, {status.fullName}.</h3>
+        <p>
+          Your acknowledgement of agreement version{" "}
+          <span className="mono">{status.agreementVersion}</span> is recorded
+          {status.storage === "local-sample"
+            ? " in this session's sample store (local development)."
+            : " as the basis for SWH Basketball Club membership."}
+        </p>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => setStatus({ kind: "idle" })}
+        >
+          Submit another acknowledgement
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form className="ack-form" onSubmit={onSubmit} noValidate>
+      <div className="field">
+        <label htmlFor="fullName">Full name</label>
+        <input
+          id="fullName"
+          name="fullName"
+          type="text"
+          autoComplete="name"
+          required
+          maxLength={120}
+          placeholder="Jordan Lee"
+        />
+      </div>
+
+      <fieldset className="field-group">
+        <legend>Contact</legend>
+        <div className="segmented" role="group" aria-label="Contact type">
+          <button
+            type="button"
+            className={contactType === "email" ? "is-active" : undefined}
+            onClick={() => setContactType("email")}
+            aria-pressed={contactType === "email"}
+          >
+            Email
+          </button>
+          <button
+            type="button"
+            className={contactType === "phone" ? "is-active" : undefined}
+            onClick={() => setContactType("phone")}
+            aria-pressed={contactType === "phone"}
+          >
+            Phone
+          </button>
+        </div>
+        <label className="sr-only" htmlFor="contact">
+          {contactType === "email" ? "Email" : "Phone"}
+        </label>
+        <input
+          id="contact"
+          name="contact"
+          type={contactType === "email" ? "email" : "tel"}
+          autoComplete={contactType === "email" ? "email" : "tel"}
+          required
+          maxLength={160}
+          placeholder={
+            contactType === "email" ? "you@example.com" : "+1 (555) 010-2030"
+          }
+        />
+      </fieldset>
+
+      <div className="field">
+        <label htmlFor="messenger">Facebook Messenger</label>
+        <input
+          id="messenger"
+          name="messenger"
+          type="text"
+          required
+          maxLength={160}
+          placeholder="Messenger name or profile link"
+        />
+        <p className="field-hint">
+          Used so the club can add you to the official Messenger group chat.
+        </p>
+      </div>
+
+      <label className="check-row">
+        <input id="hasSwhJersey" name="hasSwhJersey" type="checkbox" />
+        <span>
+          I already have an SWH jersey{" "}
+          <span className="optional">
+            (leave unchecked if the club needs to make one)
+          </span>
+        </span>
+      </label>
+
+      <label className="check-row">
+        <input id="agreed" name="agreed" type="checkbox" required />
+        <span>
+          I have read the SWH Basketball Club player agreement (version{" "}
+          {agreementVersion}) and agree to abide by it as a condition of
+          membership.
+        </span>
+      </label>
+
+      {status.kind === "error" ? (
+        <p className="form-error" role="alert">
+          {status.message}
+        </p>
+      ) : null}
+
+      <button
+        type="submit"
+        className="btn btn-primary"
+        disabled={status.kind === "submitting"}
+      >
+        {status.kind === "submitting" ? "Recording…" : "Acknowledge & join"}
+      </button>
+    </form>
+  );
+}

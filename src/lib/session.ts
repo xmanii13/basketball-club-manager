@@ -7,17 +7,31 @@ export const SESSION_COOKIE = "swh_session";
 const SESSION_DAYS = 30;
 const MAGIC_MINUTES = 30;
 
-export function absoluteUrl(request: Request, path: string): string {
+/**
+ * Canonical app origin. Never derived from Host / X-Forwarded-* (spoofable).
+ * Production requires APP_BASE_URL; local falls back to loopback.
+ */
+export function appOrigin(): string {
   const configured = process.env.APP_BASE_URL?.trim().replace(/\/$/, "");
-  if (configured) return `${configured}${path.startsWith("/") ? path : `/${path}`}`;
+  if (configured) return configured;
+  if (process.env.NODE_ENV !== "production") {
+    return "http://127.0.0.1:3000";
+  }
+  throw new Error("APP_BASE_URL is not configured");
+}
 
-  const proto =
-    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "http";
-  const host =
-    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
-    request.headers.get("host") ||
-    "127.0.0.1:3000";
-  return `${proto}://${host}${path.startsWith("/") ? path : `/${path}`}`;
+export function absoluteUrl(path: string): string {
+  const origin = appOrigin();
+  return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+/** Same as absoluteUrl, or null when production lacks APP_BASE_URL. */
+export function tryAbsoluteUrl(path: string): string | null {
+  try {
+    return absoluteUrl(path);
+  } catch {
+    return null;
+  }
 }
 
 export async function createMagicLink(playerId: string): Promise<{

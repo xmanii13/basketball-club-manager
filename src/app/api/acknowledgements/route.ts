@@ -1,26 +1,12 @@
 import { NextResponse } from "next/server";
 import { listAcknowledgements } from "@/lib/acknowledgements";
+import { adminAuthorizedFromRequest } from "@/lib/admin-auth";
 import { isUsingPostgres } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-function authorized(request: Request): boolean {
-  const token = process.env.ADMIN_TOKEN?.trim() ?? "";
-  if (!token) {
-    // Local / sample mode only: allow list when no Postgres and no token.
-    return !isUsingPostgres();
-  }
-  const header = request.headers.get("authorization") ?? "";
-  const bearer = header.toLowerCase().startsWith("bearer ")
-    ? header.slice(7).trim()
-    : "";
-  const url = new URL(request.url);
-  const queryToken = url.searchParams.get("token") ?? "";
-  return bearer === token || queryToken === token;
-}
-
 export async function GET(request: Request) {
-  if (!authorized(request)) {
+  if (!adminAuthorizedFromRequest(request)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

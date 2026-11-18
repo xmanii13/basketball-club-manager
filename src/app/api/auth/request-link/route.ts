@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { emailConfigured, sendMagicLinkEmail } from "@/lib/email";
 import { getPlayerByEmail, normalizeEmail } from "@/lib/players";
-import { absoluteUrl, createMagicLink } from "@/lib/session";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { createMagicLink, tryAbsoluteUrl } from "@/lib/session";
 
 export const runtime = "nodejs";
 
@@ -9,8 +10,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Request a magic link for an existing profile.
- * Always returns a generic success message (no account enumeration).
- * Without an email provider, we cannot safely deliver a link on lookup alone.
+ * Always returns a generic success message when possible (no account enumeration).
+ * Never returns a raw magic link in the JSON body.
  */
 export async function POST(request: Request) {
   let body: unknown;
@@ -33,6 +34,20 @@ export async function POST(request: Request) {
     );
   }
 
+  const ip = clientIp(request);
+  if (!rateLimit(`request-link:ip:${ip}`, 5, 60 * 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again later." },
+      { status: 429, headers: { "cache-control": "private, no-store" } },
+    );
+  }
+  if (!rateLimit(`request-link:email:${email}`, 3, 60 * 60 * 1000)) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again later." },
+      { status: 429, headers: { "cache-control": "private, no-store" } },
+    );
+  }
+
   const generic = {
     ok: true,
     message:
@@ -40,30 +55,37 @@ export async function POST(request: Request) {
   };
 
   try {
-    const player = await getPlayerByEmail(email);
-    if (!player) {
-      return NextResponse.json(generic, {
-        headers: { "cache-control": "private, no-store" },
-      });
-    }
-
     if (!emailConfigured()) {
       return NextResponse.json(
         {
           ok: false,
           error:
-            "Email delivery is not configured yet. Use the profile link shown after you acknowledged (or ask the club once email is set up).",
+            "Email delivery is not configured yet. If you just created your profile on this device, open /profile while this browser still has your session.",
           emailConfigured: false,
         },
         { status: 503, headers: { "cache-control": "private, no-store" } },
       );
     }
 
+    const player = await getPlayerByEmail(email);
+    if (!player) {
+      return NextResponse.json(
+        { ...generic, emailConfigured: true },
+        { headers: { "cache-control": "private, no-store" } },
+      );
+    }
+
     const magic = await createMagicLink(String(player.id));
-    const magicUrl = absoluteUrl(
-      request,
+    const magicUrl = tryAbsoluteUrl(
       `/auth/magic?token=${encodeURIComponent(magic.rawToken)}`,
     );
+    if (!magicUrl) {
+      return NextResponse.json(
+        { error: "Sign-in links are unavailable until APP_BASE_URL is set." },
+        { status: 503, headers: { "cache-control": "private, no-store" } },
+      );
+    }
+
     const sent = await sendMagicLinkEmail({
       to: player.email ?? email,
       magicUrl,

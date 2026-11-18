@@ -11,19 +11,32 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  let basePathOk = true;
+  try {
+    absoluteUrl("/profile");
+  } catch {
+    basePathOk = false;
+  }
+  if (!basePathOk) {
+    return NextResponse.json(
+      { error: "APP_BASE_URL is not configured." },
+      { status: 500 },
+    );
+  }
+
   const url = new URL(request.url);
   const token = url.searchParams.get("token")?.trim() ?? "";
   if (!token) {
-    return NextResponse.redirect(absoluteUrl(request, "/profile?error=missing_token"));
+    return NextResponse.redirect(absoluteUrl("/profile?error=missing_token"));
   }
 
   try {
     const player = await consumeMagicLink(token);
     if (!player) {
-      return NextResponse.redirect(absoluteUrl(request, "/profile?error=invalid_link"));
+      return NextResponse.redirect(absoluteUrl("/profile?error=invalid_link"));
     }
     const session = await createSession(String(player.id));
-    const response = NextResponse.redirect(absoluteUrl(request, "/profile"));
+    const response = NextResponse.redirect(absoluteUrl("/profile"));
     response.cookies.set(
       SESSION_COOKIE,
       session.rawToken,
@@ -35,6 +48,6 @@ export async function GET(request: Request) {
       "magic consume failed",
       error instanceof Error ? error.message : "unknown",
     );
-    return NextResponse.redirect(absoluteUrl(request, "/profile?error=server"));
+    return NextResponse.redirect(absoluteUrl("/profile?error=server"));
   }
 }

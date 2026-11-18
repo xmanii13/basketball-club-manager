@@ -12,9 +12,11 @@ type Status =
       agreementVersion: string;
       storage: string;
       profileLinked: boolean;
-      magicLinkUrl: string | null;
+      sessionStarted: boolean;
       magicLinkEmailed: boolean;
       emailRequiredForProfile: boolean;
+      profileAlreadyExists: boolean;
+      note: string | null;
     };
 
 export type AcknowledgeDefaults = {
@@ -65,9 +67,11 @@ export function AcknowledgeForm({
         agreementVersion?: string;
         storage?: string;
         profileLinked?: boolean;
-        magicLinkUrl?: string | null;
+        sessionStarted?: boolean;
         magicLinkEmailed?: boolean;
         emailRequiredForProfile?: boolean;
+        profileAlreadyExists?: boolean;
+        note?: string;
       };
       if (!res.ok) {
         setStatus({
@@ -82,9 +86,11 @@ export function AcknowledgeForm({
         agreementVersion: json.agreementVersion ?? agreementVersion,
         storage: json.storage ?? "unknown",
         profileLinked: Boolean(json.profileLinked),
-        magicLinkUrl: json.magicLinkUrl ?? null,
+        sessionStarted: Boolean(json.sessionStarted),
         magicLinkEmailed: Boolean(json.magicLinkEmailed),
         emailRequiredForProfile: Boolean(json.emailRequiredForProfile),
+        profileAlreadyExists: Boolean(json.profileAlreadyExists),
+        note: json.note ?? null,
       });
       form.reset();
       setContactType(defaults?.contactType ?? "email");
@@ -108,8 +114,8 @@ export function AcknowledgeForm({
           {status.storage === "local-sample"
             ? " in this session's sample store (local development)."
             : " as the basis for SWH Basketball Club membership."}
-          {status.profileLinked
-            ? " It is linked to your player profile (email)."
+          {status.sessionStarted
+            ? " Your player profile is ready on this device."
             : ""}
         </p>
         {status.emailRequiredForProfile ? (
@@ -123,21 +129,15 @@ export function AcknowledgeForm({
             We emailed you a sign-in link for your profile.
           </p>
         ) : null}
-        {status.magicLinkUrl ? (
-          <div className="magic-link-box">
-            <p>
-              <strong>Save this private profile link</strong> (email delivery is
-              not configured yet). It expires soon and works once:
-            </p>
-            <p className="mono magic-link-url">
-              <a href={status.magicLinkUrl}>{status.magicLinkUrl}</a>
-            </p>
-          </div>
-        ) : null}
+        {status.note ? <p className="field-hint">{status.note}</p> : null}
         <div className="hero-cta">
-          {status.profileLinked ? (
+          {status.sessionStarted ? (
             <a className="btn btn-primary" href="/profile">
               Open my profile
+            </a>
+          ) : status.profileAlreadyExists ? (
+            <a className="btn btn-secondary" href="/profile">
+              Sign in to profile
             </a>
           ) : null}
           <button
@@ -204,7 +204,8 @@ export function AcknowledgeForm({
           defaultValue={defaults?.contact}
         />
         <p className="field-hint">
-          Use email to create a profile you can return to with a magic link.
+          Use email to create a profile on this device. Returning later on
+          another device needs email delivery (or the same browser session).
           Phone-only acknowledgements are recorded for the club but have no
           self-serve profile.
         </p>

@@ -58,19 +58,42 @@ export async function getPlayerByEmail(email: string): Promise<PlayerRow | null>
   return rows[0] ?? null;
 }
 
-/** Upsert by email. Phone-only contacts do not create profiles. */
-export async function upsertPlayerFromAck(input: {
-  fullName: string;
-  contact: string;
-  contactType: ContactType;
-  messenger: string;
-  hasSwhJersey: boolean;
-}): Promise<PlayerRow | null> {
-  if (input.contactType !== "email") return null;
+export type AckPlayerLink =
+  | { kind: "guest"; player: null }
+  | {
+      kind: "created" | "owned" | "existing";
+      player: PlayerRow;
+    };
+
+/**
+ * Link an acknowledgement to a player profile.
+ * - Phone-only → guest (no profile).
+ * - New email → create profile.
+ * - Existing email + matching session → update profile fields.
+ * - Existing email without ownership → return player, do not overwrite fields.
+ */
+export async function linkPlayerFromAck(
+  input: {
+    fullName: string;
+    contact: string;
+    contactType: ContactType;
+    messenger: string;
+    hasSwhJersey: boolean;
+  },
+  sessionPlayerId: string | null,
+): Promise<AckPlayerLink> {
+  if (input.contactType !== "email") {
+    return { kind: "guest", player: null };
+  }
   const email = normalizeEmail(input.contact);
 
   const existing = await getPlayerByEmail(email);
   if (existing) {
+    const owns =
+      sessionPlayerId !== null && sessionPlayerId === String(existing.id);
+    if (!owns) {
+      return { kind: "existing", player: existing };
+    }
     const rows = await sql<PlayerRow>(
       `update players set
          full_name = $2,
@@ -92,7 +115,7 @@ export async function upsertPlayerFromAck(input: {
         input.hasSwhJersey,
       ],
     );
-    return rows[0] ?? null;
+    return { kind: "owned", player: rows[0] ?? existing };
   }
 
   const rows = await sql<PlayerRow>(
@@ -103,7 +126,11 @@ export async function upsertPlayerFromAck(input: {
                messenger, has_swh_jersey, created_at, updated_at`,
     [email, input.fullName, input.contact.trim(), input.messenger, input.hasSwhJersey],
   );
-  return rows[0] ?? null;
+  const created = rows[0];
+  if (!created) {
+    throw new Error("Failed to create player profile.");
+  }
+  return { kind: "created", player: created };
 }
 
 export async function updatePlayerById(

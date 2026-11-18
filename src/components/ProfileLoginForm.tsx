@@ -61,9 +61,9 @@ export function ProfileLoginForm() {
         </p>
       ) : (
         <p className="field-hint">
-          Until an email provider is configured, use the personal profile link
-          shown right after you acknowledge. Requesting a link by email alone
-          will not reveal whether an account exists.
+          Until an email provider is configured, keep using the browser where
+          you first created your profile. Requesting a link by email alone will
+          not reveal whether an account exists.
         </p>
       )}
       <button

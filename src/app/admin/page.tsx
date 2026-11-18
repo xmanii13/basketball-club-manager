@@ -1,4 +1,6 @@
+import { AdminLoginForm } from "@/components/AdminLoginForm";
 import { listAcknowledgements } from "@/lib/acknowledgements";
+import { hasAdminSession, adminTokenConfigured } from "@/lib/admin-auth";
 import { AGREEMENT_VERSION, agreementHash } from "@/lib/agreement";
 import { isUsingPostgres } from "@/lib/db";
 import { ackIsCurrent } from "@/lib/players";
@@ -20,30 +22,20 @@ function formatJersey(hasJersey: boolean | null): string {
   return "—";
 }
 
-export default async function AdminPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ token?: string }>;
-}) {
-  const params = await searchParams;
-  const adminToken = process.env.ADMIN_TOKEN?.trim() ?? "";
+export default async function AdminPage() {
   const usingPostgres = isUsingPostgres();
-  const queryToken = params.token?.trim() ?? "";
-
-  const allowed =
-    adminToken !== ""
-      ? queryToken === adminToken
-      : !usingPostgres;
+  const allowed = await hasAdminSession();
 
   if (!allowed) {
     return (
       <main className="admin-page">
         <h1>Acknowledgements</h1>
         <p className="admin-error">
-          {adminToken === "" && usingPostgres
-            ? "Admin list is locked. Set ADMIN_TOKEN and open /admin?token=…"
-            : "Unauthorized. Open /admin?token=… with the admin token."}
+          {adminTokenConfigured() === "" && usingPostgres
+            ? "Admin list is locked. Set ADMIN_TOKEN, then sign in below."
+            : "Sign in with the admin token to view acknowledgements."}
         </p>
+        {adminTokenConfigured() !== "" ? <AdminLoginForm /> : null}
         <p>
           <a href="/">← Back to agreement</a>
         </p>

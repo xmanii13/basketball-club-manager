@@ -24,7 +24,7 @@ export default async function ProfilePage({
   if (!player) {
     const errorNote =
       params.error === "invalid_link"
-        ? "That sign-in link is invalid or expired. Request a new one or use the link from your acknowledgement."
+        ? "That sign-in link is invalid or expired. Request a new one when email delivery is configured."
         : params.error === "missing_token"
           ? "Missing sign-in token."
           : params.error === "server"
@@ -38,16 +38,17 @@ export default async function ProfilePage({
           <h1>Sign in to your profile</h1>
           <p>
             Profiles are tied to the <strong>email</strong> you used when
-            acknowledging — not a Cursor account. Open your magic link, or
-            request a new one below when email delivery is set up.
+            acknowledging — not a Cursor account. Sign in with an emailed magic
+            link, or open /profile in the same browser right after you first
+            create your profile.
           </p>
           {errorNote ? <p className="form-error">{errorNote}</p> : null}
           {!canEmail ? (
             <div className="profile-banner warn">
               <p>
-                Email delivery is not configured yet. After you acknowledge with
-                an email address, save the personal profile link shown on the
-                success screen.
+                Email delivery is not configured yet. New profiles stay signed
+                in on the browser that created them. Returning from another
+                device needs Resend (or that original browser session).
               </p>
             </div>
           ) : null}
